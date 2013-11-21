@@ -22,7 +22,7 @@
   its documentation for any purpose.
 
   YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
-  PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+  PROVIDED “AS IS?WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
   INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE,
   NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
   TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
@@ -140,8 +140,9 @@
 #define ACTIVE_HIGH       !!    /* double negation forces result to be '1' */
 
 /* S1 */
-#define PUSH1_BV          BV(1)
-#define PUSH1_SBIT        P0_1
+//¸ù¾ÝÓ²¼þÐÞ¸Ä
+#define PUSH1_BV          BV(4)
+#define PUSH1_SBIT        P0_4
 
 #if defined (HAL_BOARD_CC2530EB_REV17)
   #define PUSH1_POLARITY    ACTIVE_HIGH
@@ -384,7 +385,7 @@ st( \
 
 /* Set to TRUE enable ADC usage, FALSE disable it */
 #ifndef HAL_ADC
-#define HAL_ADC TRUE
+#define HAL_ADC FALSE
 #endif
 
 /* Set to TRUE enable DMA usage, FALSE disable it */
@@ -408,7 +409,7 @@ st( \
 
 /* Set to TRUE enable LCD usage, FALSE disable it */
 #ifndef HAL_LCD
-#define HAL_LCD TRUE
+#define HAL_LCD FALSE
 #endif
 
 /* Set to TRUE enable LED usage, FALSE disable it */
