@@ -8373,7 +8373,22 @@
   <group>
     <name>App</name>
     <file>
+      <name>$PROJ_DIR$\..\Source\IC.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Source\IC.H</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Source\IC_w_r.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Source\IC_w_r.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\..\Source\OSAL_SampleApp.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Source\rc522.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\Source\SampleApp.c</name>
@@ -8386,6 +8401,9 @@
     </file>
     <file>
       <name>$PROJ_DIR$\..\Source\SampleAppHw.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\Source\variable.h</name>
     </file>
   </group>
   <group>
@@ -8652,7 +8670,7 @@
       <name>$PROJ_DIR$\..\..\..\..\..\Components\mt\MT_NWK.h</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\..\..\..\Components\mt\MT_RPC.h</name>
+      <name>$PROJ_DIR$\..\..\..\..\..\COMPONENTS\mt\MT_RPC.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\..\..\..\Components\mt\MT_SAPI.c</name>
@@ -8676,7 +8694,7 @@
       <name>$PROJ_DIR$\..\..\..\..\..\Components\mt\MT_UART.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\..\..\..\Components\mt\MT_UART.h</name>
+      <name>$PROJ_DIR$\..\..\..\..\..\COMPONENTS\mt\MT_UART.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\..\..\..\Components\mt\MT_UTIL.c</name>
@@ -8694,7 +8712,7 @@
       <name>$PROJ_DIR$\..\..\..\..\..\Components\mt\MT_ZDO.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\..\..\..\Components\mt\MT_ZDO.h</name>
+      <name>$PROJ_DIR$\..\..\..\..\..\COMPONENTS\mt\MT_ZDO.h</name>
     </file>
   </group>
   <group>
@@ -8875,7 +8893,7 @@
       <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\zdo\ZDApp.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\zdo\ZDApp.h</name>
+      <name>$PROJ_DIR$\..\..\..\..\..\COMPONENTS\stack\zdo\ZDApp.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\zdo\ZDConfig.c</name>
@@ -8893,7 +8911,7 @@
       <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\zdo\ZDObject.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\zdo\ZDObject.h</name>
+      <name>$PROJ_DIR$\..\..\..\..\..\COMPONENTS\stack\zdo\ZDObject.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\..\..\..\Components\stack\zdo\ZDProfile.c</name>

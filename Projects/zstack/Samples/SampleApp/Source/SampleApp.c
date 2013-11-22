@@ -72,6 +72,8 @@
 #include "hal_led.h"
 #include "hal_key.h"
 
+#include "IC.H"
+
 /*********************************************************************
  * MACROS
  */
@@ -179,6 +181,7 @@ void SampleApp_Init( uint8 task_id )
   // Device hardware initialization can be added here or in main() (Zmain.c).
   // If the hardware is application specific - add it here.
   // If the hardware is other parts of the device add it in main().
+  IC_Init(); //IC ≥ı ºªØ
 
  #if defined ( BUILD_ALL_DEVICES )
   // The "Demo" target is setup to have BUILD_ALL_DEVICES and HOLD_AUTO_START
@@ -203,8 +206,8 @@ void SampleApp_Init( uint8 task_id )
   //SampleApp_Periodic_DstAddr.addrMode = (afAddrMode_t)AddrBroadcast;
   SampleApp_Periodic_DstAddr.addrMode = (afAddrMode_t)Addr16Bit;
   SampleApp_Periodic_DstAddr.endPoint = SAMPLEAPP_ENDPOINT;
-  //SampleApp_Periodic_DstAddr.addr.shortAddr = 0xFFFF;
-  SampleApp_Periodic_DstAddr.addr.shortAddr = 0x0000;
+  SampleApp_Periodic_DstAddr.addr.shortAddr = 0xFFFF;
+  //SampleApp_Periodic_DstAddr.addr.shortAddr = 0x0000;
 
   // Setup for the flash command's destination address - Group 1
   SampleApp_Flash_DstAddr.addrMode = (afAddrMode_t)afAddrGroup;
@@ -311,7 +314,7 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
 
     // Setup to send message again in normal period (+ a little jitter)
     osal_start_timerEx( SampleApp_TaskID, SAMPLEAPP_SEND_PERIODIC_MSG_EVT,
-        (/*SAMPLEAPP_SEND_PERIODIC_MSG_TIMEOUT*/ 1000 + (osal_rand() & 0x00FF)) );
+        (/*SAMPLEAPP_SEND_PERIODIC_MSG_TIMEOUT*/ 400 + (osal_rand() & 0x00FF)) );
 
     // return unprocessed events
     return (events ^ SAMPLEAPP_SEND_PERIODIC_MSG_EVT);
@@ -413,20 +416,32 @@ void SampleApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
  */
 void SampleApp_SendPeriodicMessage( void )
 {
-  uint8 data[10]={0,1,2,3,4,5,6,7,8,9};
-  if ( AF_DataRequest( &SampleApp_Periodic_DstAddr, &SampleApp_epDesc,
-                       SAMPLEAPP_PERIODIC_CLUSTERID,
-                       10,
-                       /*(uint8*)&SampleAppPeriodicCounter,*/
-                       data,
-                       &SampleApp_TransID,
-                       AF_DISCV_ROUTE,
-                       AF_DEFAULT_RADIUS ) == afStatus_SUCCESS )
-  {
-  }
-  else
-  {
-    // Error occurred in request to send.
+  uint8 asc_16[16]={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
+  char Card_Id[8];
+  char *title = "The Card ID:";
+  if(IC_Test()==1) {
+    if ( AF_DataRequest( &SampleApp_Periodic_DstAddr, &SampleApp_epDesc,
+                         SAMPLEAPP_PERIODIC_CLUSTERID,
+                         4,
+                         /*(uint8*)&SampleAppPeriodicCounter,*/
+                         qq,
+                         &SampleApp_TransID,
+                         AF_DISCV_ROUTE,
+                         AF_DEFAULT_RADIUS ) == afStatus_SUCCESS )
+    {
+      for(int i=0;i<4;i++)
+      {
+        Card_Id[i*2]=asc_16[qq[i]/16];
+        Card_Id[i*2+1]=asc_16[qq[i]%16];        
+      }
+      //void HalLcdWriteStringValue( char *title, uint16 value, uint8 format, uint8 line )
+      HalLcdWriteString("Hello,WOrld",3);
+      //HalLcdWriteString(Card_Id,4);
+    }
+    else
+    {
+      // Error occurred in request to send.
+    }
   }
 }
 
