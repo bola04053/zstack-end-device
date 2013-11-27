@@ -71,8 +71,8 @@
 #include "hal_lcd.h"
 #include "hal_led.h"
 #include "hal_key.h"
-
 #include "IC.H"
+#include "stdlib.h"
 
 /*********************************************************************
  * MACROS
@@ -206,8 +206,8 @@ void SampleApp_Init( uint8 task_id )
   //SampleApp_Periodic_DstAddr.addrMode = (afAddrMode_t)AddrBroadcast;
   SampleApp_Periodic_DstAddr.addrMode = (afAddrMode_t)Addr16Bit;
   SampleApp_Periodic_DstAddr.endPoint = SAMPLEAPP_ENDPOINT;
-  SampleApp_Periodic_DstAddr.addr.shortAddr = 0xFFFF;
-  //SampleApp_Periodic_DstAddr.addr.shortAddr = 0x0000;
+  //SampleApp_Periodic_DstAddr.addr.shortAddr = 0xFFFF;
+  SampleApp_Periodic_DstAddr.addr.shortAddr = 0x0000;
 
   // Setup for the flash command's destination address - Group 1
   SampleApp_Flash_DstAddr.addrMode = (afAddrMode_t)afAddrGroup;
@@ -391,11 +391,20 @@ void SampleApp_HandleKeys( uint8 shift, uint8 keys )
  */
 void SampleApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
 {
+  //uint8 asc_16[16]={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
   uint16 flashTime;
 
   switch ( pkt->clusterId )
   {
     case SAMPLEAPP_PERIODIC_CLUSTERID:
+      if ( SampleApp_NwkState == DEV_END_DEVICE )
+      {
+        //HalLcdWriteString("Recive!",3);
+        if(*(&pkt->cmd.Data[0])==1){
+          HalLcdWriteString("LED IS OPENED.",3);
+          HalLedBlink( HAL_LED_4, 4, 50, 300 );                  
+        }
+      }
       break;
 
     case SAMPLEAPP_FLASH_CLUSTERID:
@@ -417,8 +426,7 @@ void SampleApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
 void SampleApp_SendPeriodicMessage( void )
 {
   uint8 asc_16[16]={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
-  char Card_Id[8];
-  char *title = "The Card ID:";
+  char Card_Id[8];  
   if(IC_Test()==1) {
     if ( AF_DataRequest( &SampleApp_Periodic_DstAddr, &SampleApp_epDesc,
                          SAMPLEAPP_PERIODIC_CLUSTERID,
@@ -434,9 +442,8 @@ void SampleApp_SendPeriodicMessage( void )
         Card_Id[i*2]=asc_16[qq[i]/16];
         Card_Id[i*2+1]=asc_16[qq[i]%16];        
       }
-      //void HalLcdWriteStringValue( char *title, uint16 value, uint8 format, uint8 line )
-      HalLcdWriteString("Hello,WOrld",3);
-      //HalLcdWriteString(Card_Id,4);
+      HalLcdWriteString("The Card ID:",3);
+      HalLcdWriteString(Card_Id,4);
     }
     else
     {
