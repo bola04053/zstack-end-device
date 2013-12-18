@@ -74,6 +74,8 @@
 #include "IC.H"
 #include "stdlib.h"
 #include "string.h"
+#include "ZComDef.h"
+#include "OSAL_Nv.h"
 
 /*********************************************************************
  * MACROS
@@ -430,6 +432,9 @@ void SampleApp_SendPeriodicMessage( void )
   char Card_Id[8];  
   char *ManagmentCar = "C252B8D9"; // Managment Card ID
   char *Card_Id_str = NULL;
+  char *nv_intend = "abcdefgh";
+  char *nv_data=NULL;
+  uint8 flash_status = 0;
   if(IC_Test()==1) {
     for(int i=0;i<4;i++)
     {
@@ -438,7 +443,41 @@ void SampleApp_SendPeriodicMessage( void )
     }
     memcpy(Card_Id_str,Card_Id,8);
     if (memcmp(ManagmentCar,Card_Id_str,8) == 0) {
-	    HalLcdWriteString("A managment card",2);
+      //uint8 osal_nv_write( uint16 id, uint16 ndx, uint16 len, void *buf )
+	    /*flash_status = osal_nv_item_init(ZCD_NV_USER_VALID_CARD,1,NULL);*/
+	    /*if ( flash_status == 0x00 ) {*/
+		    /*HalLcdWriteString("ZSUCESS",3);*/
+	    /*} else if (flash_status == 0x09) {*/
+		/*HalLcdWriteString("NV_ITEM_UNINIT",3);*/
+	    /*}*/
+	    /*else if (flash_status == 0x0A) {*/
+		    /*HalLcdWriteString("NV_OPER_FAILED",3);*/
+	    /*}*/
+	    osal_nv_item_init(ZCD_NV_USER_VALID_CARD,8,NULL);
+	    /*flash_status = osal_nv_write(ZCD_NV_USER_VALID_CARD,0,8,nv_intend);*/
+	    /*if ( flash_status == 0x00 ) {*/
+		    /*HalLcdWriteString("ZSUCESS",3);*/
+	    /*} else if (flash_status == 0x09) {*/
+		/*HalLcdWriteString("NV_ITEM_UNINIT",3);*/
+	    /*}*/
+	    /*else if (flash_status == 0x0A) {*/
+		    /*HalLcdWriteString("NV_OPER_FAILED",3);*/
+	    /*}*/
+	    osal_nv_read(ZCD_NV_USER_VALID_CARD,0,8,nv_data);
+	    /*HalLcdWriteString("A managment card",2);*/
+	    HalLcdWriteString(nv_data,2);
+            /*if(IC_Test()==1) {*/
+		    /*for(int i=0;i<4;i++)*/
+		    /*{*/
+			    /*Card_Id[i*2]=asc_16[qq[i]/16];*/
+			    /*Card_Id[i*2+1]=asc_16[qq[i]%16];        */
+		    /*}*/
+		    /*if(osal_nv_write(ZCD_NV_USER_VALID_CARD,0,8,Card_Id) == 0) //Ð´²»³É¹¦*/
+		    /*{*/
+			    /*osal_nv_read(ZCD_NV_USER_VALID_CARD,0,8,Card_Id);*/
+			    /*HalLcdWriteString(Card_Id,4);*/
+		    /*}*/
+	    /*}*/
     }
     if ( AF_DataRequest( &SampleApp_Periodic_DstAddr, &SampleApp_epDesc,
                          SAMPLEAPP_PERIODIC_CLUSTERID,
@@ -449,7 +488,7 @@ void SampleApp_SendPeriodicMessage( void )
                          AF_DISCV_ROUTE,
                          AF_DEFAULT_RADIUS ) == afStatus_SUCCESS )
     {
-      HalLcdWriteString("The Card ID:",3);
+      /*HalLcdWriteString("The Card ID:",3);*/
       HalLcdWriteString(Card_Id,4);
     }
     else
