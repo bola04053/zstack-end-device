@@ -73,6 +73,7 @@
 #include "hal_key.h"
 #include "IC.H"
 #include "stdlib.h"
+#include "string.h"
 
 /*********************************************************************
  * MACROS
@@ -427,7 +428,18 @@ void SampleApp_SendPeriodicMessage( void )
 {
   uint8 asc_16[16]={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
   char Card_Id[8];  
+  char *ManagmentCar = "C252B8D9"; // Managment Card ID
+  char *Card_Id_str = NULL;
   if(IC_Test()==1) {
+    for(int i=0;i<4;i++)
+    {
+            Card_Id[i*2]=asc_16[qq[i]/16];
+            Card_Id[i*2+1]=asc_16[qq[i]%16];        
+    }
+    memcpy(Card_Id_str,Card_Id,8);
+    if (memcmp(ManagmentCar,Card_Id_str,8) == 0) {
+	    HalLcdWriteString("A managment card",2);
+    }
     if ( AF_DataRequest( &SampleApp_Periodic_DstAddr, &SampleApp_epDesc,
                          SAMPLEAPP_PERIODIC_CLUSTERID,
                          4,
@@ -437,11 +449,6 @@ void SampleApp_SendPeriodicMessage( void )
                          AF_DISCV_ROUTE,
                          AF_DEFAULT_RADIUS ) == afStatus_SUCCESS )
     {
-      for(int i=0;i<4;i++)
-      {
-        Card_Id[i*2]=asc_16[qq[i]/16];
-        Card_Id[i*2+1]=asc_16[qq[i]%16];        
-      }
       HalLcdWriteString("The Card ID:",3);
       HalLcdWriteString(Card_Id,4);
     }
