@@ -71,6 +71,9 @@
 #include "hal_lcd.h"
 #include "hal_led.h"
 #include "hal_key.h"
+#include "MT_UART.h"
+#include "MT_APP.h"
+#include "MT.h"
 #include "IC.H"
 #include "stdlib.h"
 #include "string.h"
@@ -151,7 +154,9 @@ uint8 SampleAppFlashCounter = 0;
 void SampleApp_HandleKeys( uint8 shift, uint8 keys );
 void SampleApp_MessageMSGCB( afIncomingMSGPacket_t *pckt );
 void SampleApp_SendPeriodicMessage( void );
+/*void SampleApp_SendPeriodic5SecMessage( void );*/
 void SampleApp_SendFlashMessage( uint16 flashTime );
+void SampleApp_SerialCMD(mtOSALSerialData_t *cmdMsg);
 
 /*********************************************************************
  * NETWORK LAYER CALLBACKS
@@ -180,7 +185,14 @@ void SampleApp_Init( uint8 task_id )
   SampleApp_TaskID = task_id;
   SampleApp_NwkState = DEV_INIT;
   SampleApp_TransID = 0;
-
+  
+ /***********串口初始化************/
+  MT_UartInit();//初始化
+  MT_UartRegisterTaskID(task_id);//登记任务号
+  HalUARTWrite(0,"任务启动...\n",12);
+ 
+  
+  
   // Device hardware initialization can be added here or in main() (Zmain.c).
   // If the hardware is application specific - add it here.
   // If the hardware is other parts of the device add it in main().
@@ -265,6 +277,11 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
     {
       switch ( MSGpkt->hdr.event )
       {
+        
+        case CMD_SERIAL_MSG:  //串口收到数据后由MT_UART层传递过来的数据，用网蜂方法接收，编译时不定义MT相关内容，
+        SampleApp_SerialCMD((mtOSALSerialData_t *)MSGpkt);
+        break;
+        
         // Received when a key is pressed
         case KEY_CHANGE:
           SampleApp_HandleKeys( ((keyChange_t *)MSGpkt)->state, ((keyChange_t *)MSGpkt)->keys );
@@ -278,9 +295,9 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
         // Received whenever the device changes state in the network
         case ZDO_STATE_CHANGE:
           SampleApp_NwkState = (devStates_t)(MSGpkt->hdr.status);
-          if ( (SampleApp_NwkState == DEV_ZB_COORD)
-              || (SampleApp_NwkState == DEV_ROUTER)
-              || (SampleApp_NwkState == DEV_END_DEVICE) )
+	  if ( (SampleApp_NwkState == DEV_ZB_COORD)
+	      || (SampleApp_NwkState == DEV_ROUTER)
+	      || (SampleApp_NwkState == DEV_END_DEVICE) )
           {
             // Start sending the periodic message in a regular interval.
             osal_start_timerEx( SampleApp_TaskID,
@@ -426,23 +443,38 @@ void SampleApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
  *
  * @return  none
  */
+/*             +-------------------+
+               |启动等待串口写门号 |
+               |写之后发送协调器   |
+               +-------------------+
+               |先设置管理卡       |
+               |后可添加普通卡     |
+               +-------------------+
+               |刷卡开门，亮灯显示 |
+               |记录开门记录       |
+               +-------------------+
+               |无任务休眠，每5秒  |
+               |唤醒与协调器联系   |
+               +-------------------+
+*/
 void SampleApp_SendPeriodicMessage( void )
 {
   uint8 asc_16[16]={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
   char Card_Id[8];  
   char *ManagmentCar = "C252B8D9"; // Managment Card ID
   char *Card_Id_str = NULL;
-  char *nv_intend = "abcdefgh";
+  char *nv_intend = "abcdefgh"; //测试flash write
   char *nv_data=NULL;
   uint8 flash_status = 0;
   if(IC_Test()==1) {
+    //HalUARTWrite(0,"detetion card",13);
     for(int i=0;i<4;i++)
     {
             Card_Id[i*2]=asc_16[qq[i]/16];
             Card_Id[i*2+1]=asc_16[qq[i]%16];        
     }
     memcpy(Card_Id_str,Card_Id,8);
-    if (memcmp(ManagmentCar,Card_Id_str,8) == 0) {
+    if (memcmp(ManagmentCar,Card_Id_str,8) == 0) { //判断是否为管理卡,之后可以加入开卡,写入合法rfid卡id到flash
       //uint8 osal_nv_write( uint16 id, uint16 ndx, uint16 len, void *buf )
 	    /*flash_status = osal_nv_item_init(ZCD_NV_USER_VALID_CARD,1,NULL);*/
 	    /*if ( flash_status == 0x00 ) {*/
@@ -453,7 +485,7 @@ void SampleApp_SendPeriodicMessage( void )
 	    /*else if (flash_status == 0x0A) {*/
 		    /*HalLcdWriteString("NV_OPER_FAILED",3);*/
 	    /*}*/
-	    osal_nv_item_init(ZCD_NV_USER_VALID_CARD,8,NULL);
+	    osal_nv_item_init(ZCD_NV_USER_MG_CARD,8,NULL);
 	    /*flash_status = osal_nv_write(ZCD_NV_USER_VALID_CARD,0,8,nv_intend);*/
 	    /*if ( flash_status == 0x00 ) {*/
 		    /*HalLcdWriteString("ZSUCESS",3);*/
@@ -463,9 +495,10 @@ void SampleApp_SendPeriodicMessage( void )
 	    /*else if (flash_status == 0x0A) {*/
 		    /*HalLcdWriteString("NV_OPER_FAILED",3);*/
 	    /*}*/
-	    osal_nv_read(ZCD_NV_USER_VALID_CARD,0,8,nv_data);
+	    osal_nv_read(ZCD_NV_USER_MG_CARD,0,8,nv_data);
 	    /*HalLcdWriteString("A managment card",2);*/
 	    HalLcdWriteString(nv_data,2);
+            
             /*if(IC_Test()==1) {*/
 		    /*for(int i=0;i<4;i++)*/
 		    /*{*/
@@ -478,12 +511,15 @@ void SampleApp_SendPeriodicMessage( void )
 			    /*HalLcdWriteString(Card_Id,4);*/
 		    /*}*/
 	    /*}*/
+    } else 
+    {
+      //加入认证比较是否为合法的rfid卡来开门 
     }
     if ( AF_DataRequest( &SampleApp_Periodic_DstAddr, &SampleApp_epDesc,
                          SAMPLEAPP_PERIODIC_CLUSTERID,
-                         4,
+                         8,
                          /*(uint8*)&SampleAppPeriodicCounter,*/
-                         qq,
+                         Card_Id,
                          &SampleApp_TransID,
                          AF_DISCV_ROUTE,
                          AF_DEFAULT_RADIUS ) == afStatus_SUCCESS )
@@ -498,6 +534,10 @@ void SampleApp_SendPeriodicMessage( void )
   }
 }
 
+/*void SampleApp_SendPeriodic5SecMessage(void)*/
+/*{*/
+  /*;*/
+/*}*/
 /*********************************************************************
  * @fn      SampleApp_SendFlashMessage
  *
@@ -529,5 +569,33 @@ void SampleApp_SendFlashMessage( uint16 flashTime )
   }
 }
 
+
+void SampleApp_SerialCMD(mtOSALSerialData_t *cmdMsg)
+{
+ uint8 len,*str=NULL;  //len有用数据长度
+ str=cmdMsg->msg;        //指向数据开头
+ len=*str;               //msg里的第1个字节代表后面的数据长度
+ 
+ /********打印出串口接收到的数据，用于提示*********/
+ for(int i=1;i<=len;i++)
+  HalUARTWrite(0,str+i,1 ); 
+ HalUARTWrite(0,"\n",1 );//换行  
+ 
+ /*****************发送出去***参考网蜂 1小时无线数据传输教程***********************/
+  if ( AF_DataRequest( &SampleApp_Periodic_DstAddr, &SampleApp_epDesc,
+                       /* SAMPLEAPP_COM_CLUSTERID,//自己定义一个 */
+                       SAMPLEAPP_SERIAL_CLUSTERID,
+                       len+1,                  // 数据长度         
+                       str,                    //数据内容
+                       &SampleApp_TransID, 
+                       AF_DISCV_ROUTE,
+                       AF_DEFAULT_RADIUS ) == afStatus_SUCCESS )
+  {
+  }
+  else
+  {
+    // Error occurred in request to send.
+  } 
+}
 /*********************************************************************
 *********************************************************************/
