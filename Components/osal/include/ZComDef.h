@@ -179,6 +179,7 @@ extern "C"
 // 0x0201 ?0x0FFF
 #define ZCD_NV_USER_VALID_CARD 0x0201
 #define ZCD_NV_USER_MG_CARD 0x0211
+#define ZCD_NV_ROOM_ID 0x0301
 
 // ZCD_NV_STARTUP_OPTION values
 //   These are bit weighted - you can OR these together.
