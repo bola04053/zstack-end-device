@@ -348,7 +348,7 @@ uint16 SampleApp_ProcessEvent( uint8 task_id, uint16 events )
 
 		// Setup to send message again in normal period (+ a little jitter)
 		osal_start_timerEx( SampleApp_TaskID, SAMPLEAPP_SEND_PERIODIC_MSG_EVT,
-				(/*SAMPLEAPP_SEND_PERIODIC_MSG_TIMEOUT*/ 400 + (osal_rand() & 0x00FF)) );
+				(/*SAMPLEAPP_SEND_PERIODIC_MSG_TIMEOUT*/ 2000 + (osal_rand() & 0x00FF)) );
 
 		// return unprocessed events
 		return (events ^ SAMPLEAPP_SEND_PERIODIC_MSG_EVT);
@@ -470,15 +470,15 @@ void SampleApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
 	       |无任务休眠，每5秒  |
 	       |唤醒与协调器联系   |
 	       +-------------------+
+	       5CCFB527
+	       C252B8D9  我的卡号
 	       */
+uint8 addCardFlag = 0; //使用此变量来判断是否需要添加卡操作
 uint8 SampleApp_SendPeriodicMessage( void )
 {
 	uint8 asc_16[16]={'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 	char Card_Id[8];  
-	/*char *Card_Id_str = NULL;*/
-	/*char *nv_intend = "abcdefgh"; //测试flash write*/
 	char *nv_room_data,*nv_valid_card,*nv_valid_mgcard;
-	/*uint8 flash_status = 0;*/
 	/*如果ZCD_NV_ROOM_ID为空(0xff); (指示) goto failed. (等待串口写入)*/
 	/*如果ZCD_NV_USER_VALID_CARD合法 ->开门并指示 否则 失败并指示*/
 	/*如果ZCD_NV_USER_MG_CARD 为管理卡 -> 添加合法卡并指示*/
@@ -488,97 +488,70 @@ uint8 SampleApp_SendPeriodicMessage( void )
 			Card_Id[i*2]=asc_16[qq[i]/16];
 			Card_Id[i*2+1]=asc_16[qq[i]%16];        
 		}
-		/*HalUARTWrite(0,Card_Id,8);*/
+		if(addCardFlag) {
+			/*HalUARTWrite(0,"检测到添加的卡",14);*/
+			HandleFlashStatus(osal_nv_item_init(ZCD_NV_USER_VALID_CARD,8,NULL));
+			HandleFlashStatus(osal_nv_write(ZCD_NV_USER_VALID_CARD,0,8,Card_Id));
+			HalUARTWrite(0,"添加成功->",10);
+			HalUARTWrite(0,Card_Id,8);
+			addCardFlag = 0;
+			goto dete_cate_exit;
+		}
 		//Handleflashstatus 是一个宏定义 用于调试flash读和写状态
 		HandleFlashStatus(osal_nv_item_init(ZCD_NV_ROOM_ID,6,NULL));
 		HandleFlashStatus(osal_nv_read(ZCD_NV_ROOM_ID,0,6,nv_room_data));
 		if(*nv_room_data == 0xFF){ //楼号房间号为无效
 			HalUARTWrite(0,"楼号房间号未写入,使用串口进行设置",34);
-			goto nv_fail_invalid;
+			goto dete_cate_exit;
 		}
 		/*HalUARTWrite(0,nv_data,6);*/
 		HandleFlashStatus(osal_nv_item_init(ZCD_NV_USER_VALID_CARD,8,NULL));
 		HandleFlashStatus(osal_nv_read(ZCD_NV_USER_VALID_CARD,0,8,nv_valid_card));
 		if(*nv_valid_card == 0xFF) {
 			HalUARTWrite(0,"无效卡号，需要刷管理卡再添加",28);
-			//goto nv_fail_invalid;
+			goto dete_cate_exit;
 		}
 		HandleFlashStatus(osal_nv_item_init(ZCD_NV_USER_MG_CARD,8,NULL));
 		HandleFlashStatus(osal_nv_read(ZCD_NV_USER_MG_CARD,0,8,nv_valid_mgcard));
 		if(*nv_valid_mgcard == 0xFF) {
 			HalUARTWrite(0,"无效管理卡，需要使用串品进行设置",32);
+			goto dete_cate_exit;
 		}                
-		/*HalUARTWrite(0,nv_valid_mgcard,8);*/
-		/*memcpy(Card_Id_str,nv_valid_mgcard,8);*/
-		if (memcmp(nv_valid_mgcard,Card_Id,8) == 0) { //判断是否为管理卡,之后可以加入开卡,写入合法rfid卡id到flash
-			HalUARTWrite(0,"检测到管理卡,刷另一张卡可以添加为开门卡",40);
-                        //HalLedBlink( HAL_LED_4, 4, 50, 600 );
-			HalUARTWrite(0,"延时完成",8);
-			if(IC_Test()==1) {
-				HalUARTWrite(0,"检测到添加的卡",14);
-				for(int i=0;i<4;i++)
-				{
-					Card_Id[i*2]=asc_16[qq[i]/16];
-					Card_Id[i*2+1]=asc_16[qq[i]%16];        
-				}
-				/*HalUARTWrite(0,"比较是否还是管理卡",18);*/
-				//不是管理卡，且和原来的卡不一样 TODO
-				/*if(memcmp(Card_Id_str,Card_Id,8) != 0) { //再一次检测卡，添加开门卡不能为管理卡*/
-				HandleFlashStatus(osal_nv_item_init(ZCD_NV_USER_VALID_CARD,8,NULL));
-				HandleFlashStatus(osal_nv_write(ZCD_NV_USER_VALID_CARD,0,8,Card_Id));
-				HalUARTWrite(0,"添加成功->",10);
-				HalUARTWrite(0,Card_Id,8);
-				/*}*/
+		if (memcmp(nv_valid_mgcard,Card_Id,8) == 0) { //判断是否为管理卡
+			HalUARTWrite(0,"检测到管理卡:",13);
+			HalUARTWrite(0,Card_Id,8);
+			HalUARTWrite(0," 现在放入普通卡进行添加 ",24);
+			addCardFlag = 1; //标明下次进行添加卡操作
+		}
+		else //检测卡id开门是否合法
+		{
+			if(memcmp(nv_valid_card,Card_Id,8) == 0) {
+				HalUARTWrite(0,"通过开门",8);
+			}
+			else
+			{
+				HalUARTWrite(0,"认证失败",8);
 			}
 		}
-		//如果上面判断不是管理卡就进行这里的合法卡判断
-//			//      //uint8 osal_nv_write( uint16 id, uint16 ndx, uint16 len, void *buf )
-//			//	    /*flash_status = osal_nv_item_init(ZCD_NV_USER_VALID_CARD,8,NULL);*/
-//			//	    osal_nv_item_init(ZCD_NV_USER_MG_CARD,8,NULL);
-//			//	    /*flash_status = osal_nv_write(ZCD_NV_USER_VALID_CARD,0,8,nv_intend);*/
-//			//	    osal_nv_read(ZCD_NV_USER_MG_CARD,0,8,nv_data);
-//			//	    /*HalLcdWriteString("A managment card",2);*/
-//			//	    HalLcdWriteString(nv_data,2);
-//			//            
-//			if(IC_Test()==1) {
-//				for(int i=0;i<4;i++)
-//				{
-//					Card_Id[i*2]=asc_16[qq[i]/16];
-//					Card_Id[i*2+1]=asc_16[qq[i]%16];        
-//				}
-//				//不是管理卡，且和原来的卡不一样
-//				memcpy(Card_Id_str,Card_Id,8)
-//					if(osal_nv_write(ZCD_NV_USER_VALID_CARD,0,8,Card_Id) == 0)
-//					{
-//						osal_nv_read(ZCD_NV_USER_VALID_CARD,0,8,Card_Id);
-//						HalLcdWriteString(Card_Id,4);
-//					}
-//			}
-			//    } else 
-			//    {
-			//      //加入认证比较是否为合法的rfid卡来开门 
-			//    }
-			//    if ( AF_DataRequest( &SampleApp_Periodic_DstAddr, &SampleApp_epDesc,
-			//                         SAMPLEAPP_PERIODIC_CLUSTERID,
-			//                         8,
-			//                         /*(uint8*)&SampleAppPeriodicCounter,*/
-			//                         Card_Id,
-			//                         &SampleApp_TransID,
-			//                         AF_DISCV_ROUTE,
-			//                         AF_DEFAULT_RADIUS ) == afStatus_SUCCESS )
-			//    {
-			//      /*HalLcdWriteString("The Card ID:",3);*/
-			//      HalLcdWriteString(Card_Id,4);
-			//    }
-			//    else
-			//    {
-			//      // Error occurred in request to send.
-			//    }
+		//    if ( AF_DataRequest( &SampleApp_Periodic_DstAddr, &SampleApp_epDesc,
+		//                         SAMPLEAPP_PERIODIC_CLUSTERID,
+		//                         8,
+		//                         /*(uint8*)&SampleAppPeriodicCounter,*/
+		//                         Card_Id,
+		//                         &SampleApp_TransID,
+		//                         AF_DISCV_ROUTE,
+		//                         AF_DEFAULT_RADIUS ) == afStatus_SUCCESS )
+		//    {
+		//      /*HalLcdWriteString("The Card ID:",3);*/
+		//      HalLcdWriteString(Card_Id,4);
+		//    }
+		//    else
+		//    {
+		//      // Error occurred in request to send.
+		//    }
 	}
+dete_cate_exit:
 	return 0;
-nv_fail_invalid:
-	//HalUARTWrite(0,"flash invalid",13);
-	return 1;
 }
 
 /*void SampleApp_SendPeriodic5SecMessage(void)*/
@@ -616,7 +589,7 @@ void SampleApp_SendFlashMessage( uint16 flashTime )
 	}
 }
 
-
+uint8 nv_write_reboot_flag = 0; //此变量用于判断串口写成功之后，进行系统重启
 void SampleApp_SerialCMD(mtOSALSerialData_t *cmdMsg)
 {
 	uint8 len,*str=NULL;  //len有用数据长度
@@ -625,12 +598,14 @@ void SampleApp_SerialCMD(mtOSALSerialData_t *cmdMsg)
 
 	if(*(str+sizeof(uint8)) == 'R') {
 		HandleFlashStatus(osal_nv_item_init(ZCD_NV_ROOM_ID,6,NULL));
-		HandleFlashStatus(osal_nv_write(ZCD_NV_ROOM_ID,0,6,str+3*sizeof(uint8)));
+		HandleFlashStatus(osal_nv_write(ZCD_NV_ROOM_ID,0,6,str+2*sizeof(uint8)));
+		nv_write_reboot_flag = 1;
 	}
 	if(*(str+sizeof(uint8)) == 'M') {
 		HandleFlashStatus(osal_nv_item_init(ZCD_NV_USER_MG_CARD,8,NULL));
 		//(len) 4D 0A 35 43 43 46 42 35 32 37 0A
-		HandleFlashStatus(osal_nv_write(ZCD_NV_USER_MG_CARD,0,8,str+3*sizeof(uint8))); 
+		HandleFlashStatus(osal_nv_write(ZCD_NV_USER_MG_CARD,0,8,str+2*sizeof(uint8))); 
+		nv_write_reboot_flag = 1;
 	}
 	/********打印出串口接收到的数据，用于提示*********/
 	for(int i=1;i<=len;i++)
@@ -653,12 +628,13 @@ void SampleApp_SerialCMD(mtOSALSerialData_t *cmdMsg)
 	/*// Error occurred in request to send.*/
 	/*}*/
 	/*MicroWait(65535);*/
-	/*SystemReset();*/
+	if(nv_write_reboot_flag)
+		SystemReset();
 }
 /*********************************************************************
  *********************************************************************/
 //延时函数  ms
 void MilliWait(uint16 time)
 {
-  MicroWait(1000);    
+	MicroWait(1000);    
 }
